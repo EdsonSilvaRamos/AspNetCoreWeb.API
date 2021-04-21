@@ -24,15 +24,19 @@ namespace SmartSchool.API
             services.AddDbContext<SmartContext>(
                 context => context.UseSqlite(Configuration.GetConnectionString("Default"))
             );
-
             services.AddControllers().AddNewtonsoftJson(
                 option => option.SerializerSettings.ReferenceLoopHandling = 
                             Newtonsoft.Json.ReferenceLoopHandling.Ignore
             );
-
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
             services.AddScoped<IRepository, Repository>();
+            services.AddSwaggerGen(
+                options => { options.SwaggerDoc("smartschoolapi", new Microsoft.OpenApi.Models.OpenApiInfo()
+                {
+                    Title = "Smart School API",
+                    Version = "1.0"
+                });
+            });
         }
        
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -40,14 +44,14 @@ namespace SmartSchool.API
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-            }
-
-            //app.UseHttpsRedirection();
+            }            
 
             app.UseRouting();
-
-            //app.UseAuthorization();
-
+            app.UseSwagger().UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/swagger/smartschoolapi/swagger.json", "smartschoolapi");
+                options.RoutePrefix = string.Empty;
+            });
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
