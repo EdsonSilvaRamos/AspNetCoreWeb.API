@@ -1,5 +1,7 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using SmartSchool.API.Helpers;
 using SmartSchool.API.Models;
 
 namespace SmartSchool.API.Data
@@ -30,6 +32,48 @@ namespace SmartSchool.API.Data
         public bool SaveChanges()
         {
             return (_context.SaveChanges() > 0);
+        }
+
+        public async Task<PageList<Aluno>> GetAllAlunosAsync(PageParams pageParams, bool includeProfessor = false)
+        {
+            IQueryable<Aluno> query = _context.Alunos;
+
+            if (includeProfessor)
+            {
+                query = query.Include(a => a.AlunosDisciplinas)
+                                .ThenInclude(ad => ad.Disciplina)
+                                .ThenInclude(d => d.Professor);
+            }
+
+            query = query.AsNoTracking().OrderBy(a => a.Id);
+
+            if(!string.IsNullOrEmpty(pageParams.Nome))
+            {
+                query = query.Where(
+                    aluno => aluno.Nome.ToUpper().Contains(pageParams.Nome.ToUpper()) ||
+                             aluno.SobreNome.ToUpper().Contains(pageParams.Nome.ToUpper())
+                );
+            }
+
+            if(pageParams.Ativo != null)
+            {
+                if(pageParams.Ativo == true)
+                {
+                    query = query.Where(aluno => aluno.Ativo == true);
+                }
+                else
+                {
+                    query = query.Where(aluno => aluno.Ativo == false);
+                }  
+            } 
+
+            if(pageParams.Matricula > 0)
+            {
+                query = query.Where(aluno => aluno.Matricula == pageParams.Matricula);
+            }
+
+            //return await query.ToArrayAsync();
+            return await PageList<Aluno>.CreateAsync(query, pageParams.PageNumber, pageParams.PageSize);
         }
 
         public Aluno[] GetAllAlunos(bool includeProfessor = false)
@@ -124,7 +168,7 @@ namespace SmartSchool.API.Data
 
         public Professor GetProfessorById(int professorId, bool includeAluno = false)
         {
-             IQueryable<Professor> query = _context.Professores;
+            IQueryable<Professor> query = _context.Professores;
 
             if (includeAluno)
             {
